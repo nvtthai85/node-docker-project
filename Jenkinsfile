@@ -1,42 +1,40 @@
 pipeline {
-  agent any 
-  
+  agent any
+
   stages {
-    stage("Checkout") {
+    stage('Checkout') {
       steps {
         checkout scm
       }
     }
-    
-    stage("Setup Node.js") {
+
+    stage('Install Dependencies') {
       steps {
-        // Sử dụng nvm hoặc công cụ quản lý phiên bản Node.js
-        sh '''
-          curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.5/install.sh | bash
-          export NVM_DIR="$HOME/.nvm"
-          [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
-          nvm install 18  # Chọn phiên bản Node.js bạn cần
-          node --version
-        '''
-      }
-    }
-    
-    stage("Install Dependencies") {
-      steps {
-        sh 'npm ci'  // Sử dụng npm ci thay vì npm install cho CI
-      }
-    }
-    
-    stage("Test") {
-      steps {
-        sh 'npm test'
+        bat 'npm install' // Sử dụng bat thay vì sh trên Windows
       }
     }
 
-    stage("Build") {
+    stage('Run Tests') {
       steps {
-        sh 'npm run build'
+        bat 'npm test'
       }
+      post {
+        always {
+          junit '**/test-results.xml'
+        }
+      }
+    }
+
+    stage('Run Server') {
+      steps {
+        bat 'start "Node Server" npm start' // Chạy server trong cửa sổ mới
+      }
+    }
+  }
+
+  post {
+    always {
+      bat 'taskkill /F /IM node.exe /T' // Đảm bảo dừng Node.js sau khi chạy
     }
   }
 }
